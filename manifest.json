@@ -2,6 +2,6 @@
   "name": "EclipseAugments",
   "version_number": "1.0.0",
   "website_url": "",
-  "description": "Changes to Eclipse 1, 2, and 6",
+  "description": "Changes to Eclipse 1, 2, 3, and 6",
   "dependencies": ["RiskofThunder-R2API_Language-1.0.1"]
 }

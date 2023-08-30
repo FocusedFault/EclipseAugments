@@ -4,6 +4,7 @@ using R2API;
 using HarmonyLib;
 using MonoMod.Cil;
 using UnityEngine;
+using System;
 
 namespace EclipseAugments
 {
@@ -18,7 +19,10 @@ namespace EclipseAugments
       ChangeDescriptions();
       IL.RoR2.CharacterMaster.OnBodyStart += RemoveE1Modifier;
       IL.RoR2.HoldoutZoneController.FixedUpdate += RemoveE2Modifier;
+      IL.RoR2.GlobalEventManager.OnCharacterHitGroundServer += AlterE3Modifier;
       IL.RoR2.DeathRewards.OnKilledServer += RemoveE6Modifier;
+      IL.RoR2.HealthComponent.TakeDamage += ReduceAdaptiveArmor;
+      On.RoR2.CharacterMaster.OnBodyStart += CharacterMaster_OnBodyStart;
       Harmony.CreateAndPatchAll(this.GetType(), null);
     }
 
@@ -68,20 +72,35 @@ namespace EclipseAugments
 
     private void RemoveE1Modifier(ILContext il)
     {
-      ILCursor ilCursor = new ILCursor(il);
-      if (ilCursor.TryGotoNext(MoveType.Before, x => ILPatternMatchingExt.MatchLdcR4(x, 0.5f)))
-        ilCursor.Next.Operand = 1f;
+      ILCursor c = new ILCursor(il);
+      if (c.TryGotoNext(MoveType.Before, x => ILPatternMatchingExt.MatchLdcR4(x, 0.5f)))
+        c.Next.Operand = 1f;
       else
         Debug.LogError("EclipseAugments: RemoveE1Modifier IL Hook failed");
     }
 
     private void RemoveE2Modifier(ILContext il)
     {
-      ILCursor ilCursor = new ILCursor(il);
-      if (ilCursor.TryGotoNext(MoveType.Before, x => ILPatternMatchingExt.MatchLdcR4(x, 0.5f)))
-        ilCursor.Next.Operand = 1f;
+      ILCursor c = new ILCursor(il);
+      if (c.TryGotoNext(MoveType.Before, x => ILPatternMatchingExt.MatchLdcR4(x, 0.5f)))
+        c.Next.Operand = 1f;
       else
         Debug.LogError("EclipseAugments: RemoveE2Modifier IL Hook failed");
+    }
+
+    private void AlterE3Modifier(ILContext il)
+    {
+      ILCursor c = new(il);
+      if (c.TryGotoNext(MoveType.Before,
+          x => x.MatchLdloc(5)))
+      {
+        c.Index += 3;
+        c.Next.Operand = DamageType.NonLethal;
+        c.Index += 1;
+        c.Next.Operand = DamageType.FallDamage;
+      }
+      else
+        Logger.LogError("EclipseAugments: AlterE3Modifier IL Hook failed");
     }
 
     private void RemoveE6Modifier(ILContext il)
@@ -93,5 +112,36 @@ namespace EclipseAugments
         Debug.LogError("EclipseAugments: RemoveE6Modifier IL Hook failed");
     }
 
+    private void ReduceAdaptiveArmor(ILContext il)
+    {
+      ILCursor c = new(il);
+      if (c.TryGotoNext(MoveType.Before,
+          x => x.MatchLdcR4(400)))
+      {
+        c.Index++;
+        c.EmitDelegate<Func<float, HealthComponent, float>>((armorCap, self) =>
+        {
+          if (self.body.name.Contains("Brother"))
+            return armorCap;
+          else
+          {
+            Debug.LogWarning("Adaptive armor cap reduced to 100");
+            return 100f;
+          };
+        });
+      }
+      else
+        Logger.LogError("EclipseAugments: ReduceAdaptiveArmor IL Hook failed");
+    }
+
+    private void CharacterMaster_OnBodyStart(On.RoR2.CharacterMaster.orig_OnBodyStart orig, CharacterMaster self, CharacterBody body)
+    {
+      orig(self, body);
+      if (body.inventory && body.isBoss && !body.name.Contains("Brother"))
+      {
+        Debug.LogWarning($"AdaptiveArmor given to {body.name}");
+        body.inventory.GiveItemString("AdaptiveArmor");
+      }
+    }
   }
 }
