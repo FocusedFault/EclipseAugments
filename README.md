@@ -8,7 +8,7 @@ Eclipse 2: Difficulty Scaling +25%
 
 Eclipse 3: Fall Damage is doubled but not lethal
 
-Eclipse 6: Bosses have a weaker version of adaptive armor
+Eclipse 6: Bosses have a weaker version of adaptive armor (mithrix's AA goes up to 400, this goes up to 100)
 
 ## Credits
 

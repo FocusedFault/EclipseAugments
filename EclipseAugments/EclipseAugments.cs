@@ -3,6 +3,7 @@ using RoR2;
 using R2API;
 using HarmonyLib;
 using MonoMod.Cil;
+using Mono.Cecil.Cil;
 using UnityEngine;
 using System;
 
@@ -17,24 +18,13 @@ namespace EclipseAugments
     {
       IncreaseScaling();
       ChangeDescriptions();
-      IL.RoR2.CharacterMaster.OnBodyStart += RemoveE1Modifier;
+      // IL.RoR2.CharacterMaster.OnBodyStart += RemoveE1Modifier;
       IL.RoR2.HoldoutZoneController.FixedUpdate += RemoveE2Modifier;
-      IL.RoR2.GlobalEventManager.OnCharacterHitGroundServer += AlterE3Modifier;
       IL.RoR2.DeathRewards.OnKilledServer += RemoveE6Modifier;
       IL.RoR2.HealthComponent.TakeDamage += ReduceAdaptiveArmor;
       On.RoR2.CharacterMaster.OnBodyStart += CharacterMaster_OnBodyStart;
+      On.RoR2.GlobalEventManager.OnCharacterHitGroundServer += GlobalEventManager_OnCharacterHitGroundServer;
       Harmony.CreateAndPatchAll(this.GetType(), null);
-    }
-
-    [HarmonyPatch(typeof(Run), "RecalculateDifficultyCoefficent")]
-    [HarmonyPostfix]
-    private static void RecalculateDifficultyCoefficient(Run __instance)
-    {
-      if (__instance.selectedDifficulty < DifficultyIndex.Eclipse1)
-        return;
-      float num = (float)((0.75 * __instance.participatingPlayerCount + 1.75) / 15.0);
-      __instance.compensatedDifficultyCoefficient += num;
-      __instance.difficultyCoefficient += num;
     }
 
     private void IncreaseScaling()
@@ -88,21 +78,6 @@ namespace EclipseAugments
         Debug.LogError("EclipseAugments: RemoveE2Modifier IL Hook failed");
     }
 
-    private void AlterE3Modifier(ILContext il)
-    {
-      ILCursor c = new(il);
-      if (c.TryGotoNext(MoveType.Before,
-          x => x.MatchLdloc(5)))
-      {
-        c.Index += 3;
-        c.Next.Operand = DamageType.NonLethal;
-        c.Index += 1;
-        c.Next.Operand = DamageType.FallDamage;
-      }
-      else
-        Logger.LogError("EclipseAugments: AlterE3Modifier IL Hook failed");
-    }
-
     private void RemoveE6Modifier(ILContext il)
     {
       ILCursor c = new(il);
@@ -115,19 +90,16 @@ namespace EclipseAugments
     private void ReduceAdaptiveArmor(ILContext il)
     {
       ILCursor c = new(il);
-      if (c.TryGotoNext(MoveType.Before,
+      if (c.TryGotoNext(MoveType.After,
           x => x.MatchLdcR4(400)))
       {
-        c.Index++;
+        c.Emit(OpCodes.Ldarg_0);
         c.EmitDelegate<Func<float, HealthComponent, float>>((armorCap, self) =>
         {
           if (self.body.name.Contains("Brother"))
             return armorCap;
           else
-          {
-            Debug.LogWarning("Adaptive armor cap reduced to 100");
             return 100f;
-          };
         });
       }
       else
@@ -138,10 +110,79 @@ namespace EclipseAugments
     {
       orig(self, body);
       if (body.inventory && body.isBoss && !body.name.Contains("Brother"))
-      {
-        Debug.LogWarning($"AdaptiveArmor given to {body.name}");
         body.inventory.GiveItemString("AdaptiveArmor");
+    }
+
+    private void GlobalEventManager_OnCharacterHitGroundServer(On.RoR2.GlobalEventManager.orig_OnCharacterHitGroundServer orig, GlobalEventManager self, CharacterBody characterBody, Vector3 impactVelocity)
+    {
+      bool flag1 = RunArtifactManager.instance.IsArtifactEnabled(RoR2Content.Artifacts.weakAssKneesArtifactDef);
+      float num1 = Mathf.Abs(impactVelocity.y);
+      Inventory inventory = characterBody.inventory;
+      CharacterMaster master = characterBody.master;
+      CharacterMotor characterMotor = characterBody.characterMotor;
+      bool flag2 = false;
+      if (((bool)(UnityEngine.Object)inventory ? inventory.GetItemCount(RoR2Content.Items.FallBoots) : 0) <= 0 && (characterBody.bodyFlags & CharacterBody.BodyFlags.IgnoreFallDamage) == CharacterBody.BodyFlags.None)
+      {
+        float num2 = Mathf.Max(num1 - (characterBody.jumpPower + 20f), 0.0f);
+        if ((double)num2 > 0.0)
+        {
+          HealthComponent component = characterBody.GetComponent<HealthComponent>();
+          if ((bool)(UnityEngine.Object)component)
+          {
+            flag2 = true;
+            float num3 = num2 / 60f;
+            DamageInfo damageInfo = new DamageInfo();
+            damageInfo.attacker = (GameObject)null;
+            damageInfo.inflictor = (GameObject)null;
+            damageInfo.crit = false;
+            damageInfo.damage = num3 * characterBody.maxHealth;
+            damageInfo.damageType = DamageType.NonLethal | DamageType.FallDamage;
+            damageInfo.force = Vector3.zero;
+            damageInfo.position = characterBody.footPosition;
+            damageInfo.procCoefficient = 0.0f;
+            if (flag1 || characterBody.teamComponent.teamIndex == TeamIndex.Player && Run.instance.selectedDifficulty >= DifficultyIndex.Eclipse3)
+              damageInfo.damage *= 2f;
+            component.TakeDamage(damageInfo);
+          }
+        }
       }
+      if (!(bool)(UnityEngine.Object)characterMotor || (double)(Run.FixedTimeStamp.now - characterMotor.lastGroundedTime) <= 0.200000002980232)
+        return;
+      Vector3 footPosition = characterBody.footPosition;
+      float radius = characterBody.radius;
+      RaycastHit hitInfo;
+      if (!Physics.Raycast(new Ray(footPosition + Vector3.up * 1.5f, Vector3.down), out hitInfo, 4f, (int)LayerIndex.world.mask | (int)LayerIndex.water.mask, QueryTriggerInteraction.Collide))
+        return;
+      SurfaceDef objectSurfaceDef = SurfaceDefProvider.GetObjectSurfaceDef(hitInfo.collider, hitInfo.point);
+      if (!(bool)(UnityEngine.Object)objectSurfaceDef)
+        return;
+      EffectManager.SpawnEffect(LegacyResourcesAPI.Load<GameObject>("Prefabs/Effects/ImpactEffects/CharacterLandImpact"), new EffectData()
+      {
+        origin = footPosition,
+        scale = radius,
+        color = (Color32)objectSurfaceDef.approximateColor
+      }, true);
+      if ((bool)(UnityEngine.Object)objectSurfaceDef.footstepEffectPrefab)
+        EffectManager.SpawnEffect(objectSurfaceDef.footstepEffectPrefab, new EffectData()
+        {
+          origin = hitInfo.point,
+          scale = radius * 3f
+        }, false);
+      SfxLocator component1 = characterBody.GetComponent<SfxLocator>();
+      if (!(bool)(UnityEngine.Object)component1)
+        return;
+      if (objectSurfaceDef.materialSwitchString != null && objectSurfaceDef.materialSwitchString.Length > 0)
+      {
+        int num4 = (int)AkSoundEngine.SetSwitch("material", objectSurfaceDef.materialSwitchString, characterBody.gameObject);
+      }
+      else
+      {
+        int num5 = (int)AkSoundEngine.SetSwitch("material", "dirt", characterBody.gameObject);
+      }
+      int num6 = (int)Util.PlaySound(component1.landingSound, characterBody.gameObject);
+      if (!flag2)
+        return;
+      int num7 = (int)Util.PlaySound(component1.fallDamageSound, characterBody.gameObject);
     }
   }
 }
