@@ -9,7 +9,7 @@ using System;
 namespace EclipseAugments
 {
 
-  [BepInPlugin("com.Nuxlar.EclipseAugments", "EclipseAugments", "1.0.0")]
+  [BepInPlugin("com.Nuxlar.EclipseAugments", "EclipseAugments", "1.1.0")]
   public class EclipseAugments : BaseUnityPlugin
   {
 
