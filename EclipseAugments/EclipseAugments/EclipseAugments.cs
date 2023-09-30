@@ -9,7 +9,7 @@ using System;
 namespace EclipseAugments
 {
 
-  [BepInPlugin("com.Nuxlar.EclipseAugments", "EclipseAugments", "1.1.0")]
+  [BepInPlugin("com.Nuxlar.EclipseAugments", "EclipseAugments", "1.1.2")]
   public class EclipseAugments : BaseUnityPlugin
   {
 
@@ -22,7 +22,7 @@ namespace EclipseAugments
       IL.RoR2.DeathRewards.OnKilledServer += RemoveE6Modifier;
       IL.RoR2.HealthComponent.TakeDamage += ReduceAdaptiveArmor;
       On.RoR2.CharacterMaster.OnBodyStart += CharacterMaster_OnBodyStart;
-      On.RoR2.CombatDirector.Awake += CombatDirector_Awake;
+      On.RoR2.CombatDirector.OnEnable += CombatDirector_OnEnable;
       On.RoR2.GlobalEventManager.OnCharacterHitGroundServer += GlobalEventManager_OnCharacterHitGroundServer;
     }
 
@@ -42,12 +42,12 @@ namespace EclipseAugments
     {
       string str1 = "Starts at baseline Monsoon difficulty.\n";
       string str2 = "\n<mspace=0.5em>(1)</mspace> Difficulty Scaling: <style=cIsHealth>+25%</style></style>";
-      string str3 = "\n<mspace=0.5em>(2)</mspace> Elite Bias: <style=cIsHealth>+25%</style></style>";
+      string str3 = "\n<mspace=0.5em>(2)</mspace> Director Credits: <style=cIsHealth>+25%</style></style>";
       string str4 = "\n<mspace=0.5em>(3)</mspace> Ally Fall Damage: <style=cIsHealth>+100%</style></style>";
       string str5 = "\n<mspace=0.5em>(4)</mspace> Enemies: <style=cIsHealth>+40% Faster</style></style>";
       string str6 = "\n<mspace=0.5em>(5)</mspace> Ally Healing: <style=cIsHealth>-50%</style></style>";
-      string str7 = "\n<mspace=0.5em>(6)</mspace> Enemy Gold Drops: <style=cIsHealth>-10%</style></style>";
-      string str8 = "\n<mspace=0.5em>(7)</mspace> Boss Armor: <style=cIsHealth>Adaptive</style></style>";
+      string str7 = "\n<mspace=0.5em>(6)</mspace> Boss Armor: <style=cIsHealth>Adaptive</style></style>";
+      string str8 = "\n<mspace=0.5em>(7)</mspace>Enemy Cooldowns: <style=cIsHealth>-50%</style></style>";
       string str9 = "\n<mspace=0.5em>(8)</mspace> Allies recieve <style=cIsHealth>permanent damage</style></style>";
       string str10 = "\"You only celebrate in the light... because I allow it.\" \n\n";
       LanguageAPI.Add("ECLIPSE_1_DESCRIPTION", str1 + str2);
@@ -96,10 +96,10 @@ namespace EclipseAugments
         c.Emit(OpCodes.Ldarg_0);
         c.EmitDelegate<Func<float, HealthComponent, float>>((armorCap, self) =>
         {
-          if (self.body.name.Contains("Brother"))
+          if (self.body.name.Contains("Brother") || self.body.name.Contains("VoidRaid"))
             return armorCap;
           else
-            return 100f;
+            return 150f;
         });
       }
       else
@@ -109,15 +109,21 @@ namespace EclipseAugments
     private void CharacterMaster_OnBodyStart(On.RoR2.CharacterMaster.orig_OnBodyStart orig, CharacterMaster self, CharacterBody body)
     {
       orig(self, body);
-      if (body.inventory && body.isBoss && !body.name.Contains("Brother"))
+      if (body.inventory && body.isBoss && !body.name.Contains("Brother") && !body.name.Contains("VoidRaid"))
         body.inventory.GiveItemString("AdaptiveArmor");
     }
 
-    private void CombatDirector_Awake(On.RoR2.CombatDirector.orig_Awake orig, CombatDirector self)
+    private void CombatDirector_OnEnable(On.RoR2.CombatDirector.orig_OnEnable orig, CombatDirector self)
     {
       orig(self);
       if (Run.instance && Run.instance.selectedDifficulty >= DifficultyIndex.Eclipse2)
-        self.eliteBias /= 1.25f;
+      {
+        CombatDirector.DirectorMoneyWave[] moneyWaves = self.moneyWaves;
+        if (moneyWaves == null || moneyWaves.Length <= 0)
+          return;
+        foreach (CombatDirector.DirectorMoneyWave moneyWave in moneyWaves)
+          moneyWave.multiplier *= 0.25f;
+      }
     }
 
     private void GlobalEventManager_OnCharacterHitGroundServer(On.RoR2.GlobalEventManager.orig_OnCharacterHitGroundServer orig, GlobalEventManager self, CharacterBody characterBody, Vector3 impactVelocity)

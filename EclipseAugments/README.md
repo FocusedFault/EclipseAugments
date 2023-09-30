@@ -4,7 +4,7 @@ These changes should keep the intended game's pace while ramping up difficulty.
 
 Eclipse 1: Difficulty Scaling +25%
 
-Eclipse 2: Elite Bias +25% (more elites should spawn)
+Eclipse 2: Director Credits +25% (stronger/more enemies)
 
 Eclipse 3: Fall Damage is doubled (not lethal)
 
@@ -16,6 +16,7 @@ Adaptive armor is why Mithrix feels tankier than his actual HP value (Base/Level
 
 ## Changelog
 
-**1.0.0**
+**1.1.2**
 
-- Release
+- Changes E2 since it wasn't working
+- Increases E6 AA to 150
