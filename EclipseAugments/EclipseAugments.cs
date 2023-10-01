@@ -9,7 +9,7 @@ using System;
 namespace EclipseAugments
 {
 
-  [BepInPlugin("com.Nuxlar.EclipseAugments", "EclipseAugments", "1.1.2")]
+  [BepInPlugin("com.Nuxlar.EclipseAugments", "EclipseAugments", "1.1.3")]
   public class EclipseAugments : BaseUnityPlugin
   {
 
@@ -122,7 +122,7 @@ namespace EclipseAugments
         if (moneyWaves == null || moneyWaves.Length <= 0)
           return;
         foreach (CombatDirector.DirectorMoneyWave moneyWave in moneyWaves)
-          moneyWave.multiplier *= 0.25f;
+          moneyWave.multiplier *= 1.25f;
       }
     }
 

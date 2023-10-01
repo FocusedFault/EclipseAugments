@@ -16,6 +16,10 @@ Adaptive armor is why Mithrix feels tankier than his actual HP value (Base/Level
 
 ## Changelog
 
+**1.1.3**
+
+- Fixes E2 not working (again)
+
 **1.1.2**
 
 - Changes E2 since it wasn't working
