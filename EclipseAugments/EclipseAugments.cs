@@ -9,7 +9,7 @@ using System;
 namespace EclipseAugments
 {
 
-  [BepInPlugin("com.Nuxlar.EclipseAugments", "EclipseAugments", "1.1.3")]
+  [BepInPlugin("com.Nuxlar.EclipseAugments", "EclipseAugments", "1.1.4")]
   public class EclipseAugments : BaseUnityPlugin
   {
 
@@ -42,12 +42,12 @@ namespace EclipseAugments
     {
       string str1 = "Starts at baseline Monsoon difficulty.\n";
       string str2 = "\n<mspace=0.5em>(1)</mspace> Difficulty Scaling: <style=cIsHealth>+25%</style></style>";
-      string str3 = "\n<mspace=0.5em>(2)</mspace> Director Credits: <style=cIsHealth>+25%</style></style>";
+      string str3 = "\n<mspace=0.5em>(2)</mspace> Director Credits: <style=cIsHealth>+15%</style></style>";
       string str4 = "\n<mspace=0.5em>(3)</mspace> Ally Fall Damage: <style=cIsHealth>+100%</style></style>";
       string str5 = "\n<mspace=0.5em>(4)</mspace> Enemies: <style=cIsHealth>+40% Faster</style></style>";
       string str6 = "\n<mspace=0.5em>(5)</mspace> Ally Healing: <style=cIsHealth>-50%</style></style>";
       string str7 = "\n<mspace=0.5em>(6)</mspace> Boss Armor: <style=cIsHealth>Adaptive</style></style>";
-      string str8 = "\n<mspace=0.5em>(7)</mspace>Enemy Cooldowns: <style=cIsHealth>-50%</style></style>";
+      string str8 = "\n<mspace=0.5em>(7)</mspace> Enemy Cooldowns: <style=cIsHealth>-50%</style></style>";
       string str9 = "\n<mspace=0.5em>(8)</mspace> Allies recieve <style=cIsHealth>permanent damage</style></style>";
       string str10 = "\"You only celebrate in the light... because I allow it.\" \n\n";
       LanguageAPI.Add("ECLIPSE_1_DESCRIPTION", str1 + str2);
@@ -99,7 +99,7 @@ namespace EclipseAugments
           if (self.body.name.Contains("Brother") || self.body.name.Contains("VoidRaid"))
             return armorCap;
           else
-            return 150f;
+            return 125f;
         });
       }
       else
@@ -122,7 +122,7 @@ namespace EclipseAugments
         if (moneyWaves == null || moneyWaves.Length <= 0)
           return;
         foreach (CombatDirector.DirectorMoneyWave moneyWave in moneyWaves)
-          moneyWave.multiplier *= 1.25f;
+          moneyWave.multiplier *= 1.15f;
       }
     }
 
